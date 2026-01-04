@@ -1,6 +1,6 @@
 
 module "eks_nov25" {
-  source = "../../nov-25"
+  source = "github.com/aumthakkar/eks-nov25.git"
 
   vpc_cidr    = "10.0.0.0/16"
   aws_region  = "eu-north-1"
