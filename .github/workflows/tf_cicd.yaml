@@ -1,0 +1,140 @@
+name: Terraform Workflow
+on:
+    push:
+        branches: 
+        -   main
+    pull_request:
+        branches:
+        -   main
+    workflow_dispatch:
+        inputs:
+            action:
+                description: Manual Trigger Workflow
+                default: destroy
+                required: true
+                type: choice
+                options:
+                    - plan
+                    - apply 
+                    - destroy
+env:
+    TF_VERSION: "1.13.3"
+    TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}   
+
+jobs:
+    plan:
+        name: Terraform Plan
+        runs-on: ubuntu-latest
+        steps:
+            -   name: Clone github repo
+                uses: actions/checkout@v6
+            
+            -   name: Configure AWS Creds
+                uses: aws-actions/configure-aws-credentials@v5.1.1
+                with:
+                    aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                    aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                    aws-region: "eu-north-1"
+
+            -   name: Setup Terraform
+                uses: hashicorp/setup-terraform@v3
+                with:
+                    terraform_version: ${{ env.TF_VERSION }}
+            
+            -   name: Initialize, Validate & Terraform Plan
+                run: |
+                    terraform init
+                    terraform validate
+                    terraform plan -out=tfplan
+            
+            -   name: Upload tfplan artifact
+                uses: actions/upload-artifact@v4
+                with:
+                    name: tfplan
+                    path: tfplan
+    
+    apply:
+        if: ${{ github.event.inputs.action == 'apply' }}
+        name: Terraform Apply
+        needs: plan
+        runs-on: ubuntu-latest
+        environment: apply-approval
+        steps:
+            -   name: Clone github repo
+                uses: actions/checkout@v6
+            
+            -   name: Configure AWS Creds
+                uses: aws-actions/configure-aws-credentials@v5.1.1
+                with:
+                    aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                    aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                    aws-region: "eu-north-1"
+
+            -   name: Download tfplan Artifact 
+                uses: actions/download-artifact@v4
+                with:
+                    name: tfplan
+                    path: .
+
+            -   name: Setup Terraform
+                uses: hashicorp/setup-terraform@v3
+                with:
+                    terraform_version: ${{ env.TF_VERSION }}
+
+            -   name: Initialize Terraform
+                run: |
+                    terraform init -input=false
+            
+            -   name: Apply Terraform Config
+                run: |
+                    terraform apply -auto-approve tfplan
+
+
+    destroy:
+        if: ${{ github.event.inputs.action == 'destroy' }}
+        needs: apply 
+        name: Terraform Destroy
+        runs-on: ubuntu-latest
+        environment: destroy-approval
+
+        steps:
+            -   name: Checkout repo
+                uses: actions/checkout@v4
+
+            -   name: Configure AWS Creds
+                uses: aws/configure-aws-credentials@v5.1.1
+                with: 
+                    aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                    aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                    aws-region: "eu-north-1"
+
+            -   name: Setup Terraform
+                uses: hashicorp/setup-terraform@v3
+                with:
+                    terraform_version: ${{ env.TF_VERSION }}
+
+            -   name: Terraform Initialize
+                run: |
+                    terraform init -input=false
+            
+            -   name: Terraform Destroy
+                run: |
+                    terraform destroy -auto-approve
+
+            
+
+
+
+
+
+
+
+
+
+                    
+
+        
+
+        
+
+    
