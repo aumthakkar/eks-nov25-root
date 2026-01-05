@@ -31,7 +31,7 @@ module "eks_nov25" {
   node_group_ami_type      = "AL2_x86_64"
   node_group_capacity_type = "SPOT"
   node_group_disk_size     = 20
-  node_group_instance_type = ["t3.medium"]
+  node_group_instance_type = ["t3.large"]
 
   desired_nodegroup_size = 1
   max_nodegroup_size     = 1
