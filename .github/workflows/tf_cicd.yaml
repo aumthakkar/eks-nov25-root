@@ -92,7 +92,6 @@ jobs:
 
     destroy:
         if: ${{ github.event.inputs.action == 'destroy' }}
-        needs: plan 
         name: Terraform Destroy
         runs-on: ubuntu-latest
         environment: destroy-approval
